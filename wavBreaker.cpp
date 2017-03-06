@@ -17,34 +17,36 @@ int main(int argc, char** args) {
 
    parse_args(argc, args);
 
-   //read wav duration
+   //call ffmpeg with original file and store output in ffmpeg_duration_command_output
    std::string ffmpeg_duration_command = "ffmpeg -i ";
-   ffmpeg_duration_command += args[argc - 1];
+   ffmpeg_duration_command += input_filename;
    ffmpeg_duration_command += " 2>&1"; // redirect stderr to stdout, ffmpeg use stderr
    std::string ffmpeg_duration_command_output = exec_get_return(ffmpeg_duration_command.c_str());
    
+   //calculate duration, chunk size, number of chunks, etc..
    int duration = getDurationInSeconds(ffmpeg_duration_command_output);
    int chunkSize = interval_minutes * 60;
    int chunks = duration / chunkSize;
    int lastChunk = duration % chunkSize;
    
-   std::cout << "chunks: " << chunks << std::endl;
+   std::cout << "chunks: " << chunks << std::endl; //debug
    
    int acc = 0;
    for (int i = 0; i < chunks; i++)
    {
      if (i == chunks - 1)
      {
-       chunkSize += lastChunk;
+       chunkSize += lastChunk; //the last chunk will be bigger
      }
 
+	 //generate filename with number
      std::ostringstream wavOutputss;
-     wavOutputss << filename << i << ".wav";
+     wavOutputss << i << output_filename << ".wav";
      std::string wavOutput(wavOutputss.str());
 
      //split
      std::stringstream ffmpegCommand;
-     ffmpegCommand << "ffmpeg -i " << "\"" << args[argc - 1] << "\"" << " -ss " << acc << " -t " << chunkSize << " " << wavOutput;
+     ffmpegCommand << "ffmpeg -i " << "\"" << input_filename << "\"" << " -ss " << acc << " -t " << chunkSize << " " << wavOutput;
      system(ffmpegCommand.str().c_str());
      acc += chunkSize;
 
@@ -81,7 +83,7 @@ std::string exec_get_return(const char* cmd) { //from here: http://stackoverflow
 int getDurationInSeconds(std::string ffmpeg_out)
 {
 	int seconds = 0;
-	//process ffmpeg output to find duration
+	//process ffmpeg output to find duration of file
 	std::istringstream f(ffmpeg_out);
 	std::string line;
 	while (std::getline(f, line)) {
@@ -100,6 +102,8 @@ int getDurationInSeconds(std::string ffmpeg_out)
 
 void parse_args(int argc, char** args)
 {
+	input_filename = std::string(args[argc - 1]);
+	
   for (int i = 0; i < argc; i++)
   {
       if (std::string(args[i]) == "-i")
@@ -114,7 +118,7 @@ void parse_args(int argc, char** args)
 
       if (std::string(args[i]) == "-o")
       {
-        filename = std::string(args[i + 1]);
+        output_filename = std::string(args[i + 1]);
       }
   }
 }

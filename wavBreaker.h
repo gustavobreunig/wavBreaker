@@ -11,4 +11,5 @@ std::string exec_get_return(const char* cmd);
 
 int interval_minutes = 0;
 int bitrate = 0;
-std::string filename;
+std::string input_filename;
+std::string output_filename;
