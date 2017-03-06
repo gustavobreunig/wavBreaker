@@ -1,9 +1,3 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <stdlib.h>
-#include <stdexcept>
 #include "wavBreaker.h"
 
 int main(int argc, char** args) {
@@ -20,7 +14,7 @@ int main(int argc, char** args) {
    //call ffmpeg with original file and store output in ffmpeg_duration_command_output
    std::string ffmpeg_duration_command = "ffmpeg -i ";
    ffmpeg_duration_command += input_filename;
-   ffmpeg_duration_command += " 2>&1"; // redirect stderr to stdout, ffmpeg use stderr
+   ffmpeg_duration_command += " 2>&1"; // redirect stderr to stdout, ffmpeg use stderr when there is no output file
    std::string ffmpeg_duration_command_output = exec_get_return(ffmpeg_duration_command.c_str());
    
    //calculate duration, chunk size, number of chunks, etc..
@@ -29,9 +23,7 @@ int main(int argc, char** args) {
    int chunks = duration / chunkSize;
    int lastChunk = duration % chunkSize;
    
-   std::cout << "chunks: " << chunks << std::endl; //debug
-   
-   int acc = 0;
+   int start_offset = 0;
    for (int i = 0; i < chunks; i++)
    {
      if (i == chunks - 1)
@@ -41,22 +33,54 @@ int main(int argc, char** args) {
 
 	 //generate filename with number
      std::ostringstream wavOutputss;
-     wavOutputss << i << output_filename << ".wav";
+	 if (i < 10)
+	 wavOutputss << 0;
+     wavOutputss << i << ". " << output_filename;
      std::string wavOutput(wavOutputss.str());
 
      //split
      std::stringstream ffmpegCommand;
-     ffmpegCommand << "ffmpeg -i " << "\"" << input_filename << "\"" << " -ss " << acc << " -t " << chunkSize << " " << wavOutput;
+     ffmpegCommand << "ffmpeg -i " << "\"" << input_filename << "\"" << " -ss " << start_offset << " -t " << chunkSize << " " << "\"" << wavOutput << ".wav\"";
+	 start_offset += chunkSize;
      system(ffmpegCommand.str().c_str());
-     acc += chunkSize;
 
      //encode
      std::stringstream lameCommand;
-     lameCommand << "lame -b " << bitrate << " " << wavOutput;
+     lameCommand << "lame -b " << bitrate << " -q0 --tn " << i + 1 << " --ta " << "\"" << wavOutput << "\"" << " " << "\"" << wavOutput << ".wav\"" << " " << "\"" << wavOutput << ".mp3\"";
      system(lameCommand.str().c_str());
 
      //delete wav file
-     remove(wavOutput.c_str());
+	 std::stringstream delCommand;
+	 delCommand << "del " << "\"" << wavOutput << ".wav\"";
+     system(delCommand.str().c_str());
+	 
+	 //change mp3 file attributes, creation time, last access time and last write
+	 //to increment one minute each file
+	 //this is needed because some mp3 readers order by these attributes
+	 std::string mp3_filename(wavOutput);
+	 mp3_filename += ".mp3";
+	 HANDLE h_mp3_file = CreateFile(mp3_filename.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	 FILETIME creation;
+	 FILETIME lastAccess;
+	 FILETIME lastWrite;
+	 if (!GetFileTime(h_mp3_file, &creation, &lastAccess, &lastWrite))
+	 {
+		 std::cout << "cannot retrieve file attributes: error " << GetLastError() << std::endl;
+		 return -1;
+	 }
+	 
+	 //this will create files in the past and future
+	 creation.dwHighDateTime -= chunks - i;
+	 lastAccess.dwHighDateTime -= chunks - i;
+	 lastWrite.dwHighDateTime -= chunks - i;
+	 
+	 if (!SetFileTime(h_mp3_file, &creation, &lastAccess, &lastWrite))
+	 {
+		 std::cout << "cannot change file attributes: error " << GetLastError() << std::endl;
+		 return -1;
+	 }
+	 
+	 CloseHandle(h_mp3_file);
    }
 
    return 0;

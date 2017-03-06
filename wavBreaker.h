@@ -3,6 +3,8 @@
 #include <sstream>
 #include <string>
 #include <stdlib.h>
+#include <stdexcept>
+#include <windows.h>
 
 void parse_args(int argc, char** args);
 int main(int argc, char** args);
