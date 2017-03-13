@@ -23,6 +23,11 @@ int main(int argc, char** args) {
    int chunks = duration / chunkSize;
    int lastChunk = duration % chunkSize;
    
+   SYSTEMTIME thesystemtime;
+   GetSystemTime(&thesystemtime); //will use later
+   thesystemtime.wSecond = 0;
+   thesystemtime.wHour = 0;
+   
    int start_offset = 0;
    for (int i = 0; i < chunks; i++)
    {
@@ -34,7 +39,9 @@ int main(int argc, char** args) {
 	 //generate filename with number
      std::ostringstream wavOutputss;
 	 if (i < 10)
-	 wavOutputss << 0;
+	 {
+		 wavOutputss << 0;
+	 }
      wavOutputss << i << ". " << output_filename;
      std::string wavOutput(wavOutputss.str());
 
@@ -63,16 +70,17 @@ int main(int argc, char** args) {
 	 FILETIME creation;
 	 FILETIME lastAccess;
 	 FILETIME lastWrite;
-	 if (!GetFileTime(h_mp3_file, &creation, &lastAccess, &lastWrite))
+	 
+	 //every chunk, increase 1 minute
+	 thesystemtime.wMinute = i;
+	 if (i > 0 && i % 60 == 0)
 	 {
-		 std::cout << "cannot retrieve file attributes: error " << GetLastError() << std::endl;
-		 return -1;
+		 thesystemtime.wHour += 1;
 	 }
 	 
-	 //this will create files in the past and future
-	 creation.dwHighDateTime -= chunks - i;
-	 lastAccess.dwHighDateTime -= chunks - i;
-	 lastWrite.dwHighDateTime -= chunks - i;
+	 SystemTimeToFileTime(&thesystemtime,&creation);
+	 SystemTimeToFileTime(&thesystemtime,&lastAccess);
+	 SystemTimeToFileTime(&thesystemtime,&lastWrite);
 	 
 	 if (!SetFileTime(h_mp3_file, &creation, &lastAccess, &lastWrite))
 	 {
