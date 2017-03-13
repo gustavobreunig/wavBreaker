@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-Wall
+CFLAGS=-Wall -O3 -static-libgcc -static-libstdc++
 
 FILES= wavBreaker.cpp
 
