@@ -17,7 +17,9 @@ int main(int argc, char** args) {
 
    //call ffmpeg with original file and store output in ffmpeg_duration_command_output
    std::string ffmpeg_duration_command = "ffmpeg -i ";
+   ffmpeg_duration_command += "\"";
    ffmpeg_duration_command += input_filename;
+   ffmpeg_duration_command += "\"";
    ffmpeg_duration_command += " 2>&1"; // redirect stderr to stdout, ffmpeg use stderr when there is no output file
    std::string ffmpeg_duration_command_output = exec_get_return(ffmpeg_duration_command.c_str());
    
