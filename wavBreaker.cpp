@@ -1,15 +1,19 @@
 #include "wavBreaker.h"
 
-int main(int argc, char** args) {
-   if (argc != 8)
-   {
+void printUsage()
+{
      std::cout << "Usage:" << std::endl;
-     std::cout << "wavBreaker -i interval_minutes -b bitrate -o filename file.wav" << std::endl;
-     std::cout << "example: wavBreaker -i 5 -b 256 -o music music.wav" << std::endl;
-     return 0;
-   }
+     std::cout << "wavBreaker -i interval_minutes -b bitrate [-h hour_creation] -o filename file.wav" << std::endl;
+     std::cout << "example: wavBreaker -i 5 -b 256 -h 13 -o music music.wav" << std::endl;	
+}
 
-   parse_args(argc, args);
+int main(int argc, char** args) {
+
+   if (!parse_args(argc, args))
+   {
+	   printUsage();
+	   return 0;
+   }
 
    //call ffmpeg with original file and store output in ffmpeg_duration_command_output
    std::string ffmpeg_duration_command = "ffmpeg -i ";
@@ -26,7 +30,7 @@ int main(int argc, char** args) {
    SYSTEMTIME thesystemtime;
    GetSystemTime(&thesystemtime); //will use later
    thesystemtime.wSecond = 0;
-   thesystemtime.wHour = 0;
+   thesystemtime.wHour = hour_creation;
    
    int start_offset = 0;
    for (int i = 0; i < chunks; i++)
@@ -132,25 +136,40 @@ int getDurationInSeconds(std::string ffmpeg_out)
 	return seconds;
 }
 
-void parse_args(int argc, char** args)
+//true if all required args are passed
+bool parse_args(int argc, char** args)
 {
 	input_filename = std::string(args[argc - 1]);
+	bool iArg = false;
+	bool bArg = false;
+	bool oArg = false;
 	
   for (int i = 0; i < argc; i++)
   {
       if (std::string(args[i]) == "-i")
       {
         interval_minutes = atoi(args[i + 1]);
+		iArg = true;
       }
 
       if (std::string(args[i]) == "-b")
       {
         bitrate = atoi(args[i + 1]);
+		bArg = true;
       }
 
       if (std::string(args[i]) == "-o")
       {
         output_filename = std::string(args[i + 1]);
+		oArg = true;
+      }
+	  
+	  if (std::string(args[i]) == "-h")
+      {
+        hour_creation = atoi(args[i + 1]);
       }
   }
+  
+  return iArg && bArg && oArg;
+  
 }
