@@ -9,11 +9,15 @@
 #include <stdexcept>
 #include <windows.h>
 
+const char* TEMP_WAV_FILE = "wavTemp.wav";
+
 bool parse_args(int argc, char** args);
 int main(int argc, char** args);
-int getDurationInSeconds(std::string ffmpeg_out);
 std::string exec_get_return(const char* cmd);
 void printUsage();
+void deleteTempWav();
+void createWavTempFile(std::string original);
+int getWavDuration(std::string wav);
 
 int interval_minutes = 0;
 int bitrate = 0;

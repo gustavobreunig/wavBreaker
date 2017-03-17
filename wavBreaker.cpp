@@ -7,6 +7,47 @@ void printUsage()
      std::cout << "example: wavBreaker -i 5 -b 256 -h 13 -o music music.wav" << std::endl;	
 }
 
+void createWavTempFile(std::string original)
+{
+	//convert whatever the file is, to default WAV
+	std::string ffmpeg_to_wav = "ffmpeg -i ";
+	ffmpeg_to_wav += "\"";
+	ffmpeg_to_wav += original;
+	ffmpeg_to_wav += "\"";
+	ffmpeg_to_wav += " ";
+	ffmpeg_to_wav += TEMP_WAV_FILE;
+	system(ffmpeg_to_wav.c_str());
+}
+
+int getWavDuration(std::string wav)
+{
+	//parse and return wav duration in seconds
+	//call ffmpeg with the wav file and store output in ffmpeg_duration_command_output
+	std::string ffmpeg_duration_command = "ffmpeg -i ";
+	ffmpeg_duration_command += "\"";
+	ffmpeg_duration_command += wav;
+	ffmpeg_duration_command += "\"";
+	ffmpeg_duration_command += " 2>&1"; // redirect stderr to stdout, ffmpeg use stderr when there is no output file
+	std::string ffmpeg_duration_command_output = exec_get_return(ffmpeg_duration_command.c_str());
+
+	int seconds = 0;
+	//process ffmpeg output to find duration of file
+	std::istringstream f(ffmpeg_duration_command_output);
+	std::string line;
+	while (std::getline(f, line)) {
+		if (line.substr(2, 8) == "Duration")
+		{
+			//get hours, minutes and seconds from line
+			//ex:   Duration: 00:59:14.74, bitrate: 1411 kb/s		
+			seconds += atoi(line.substr(12, 2).c_str()) * 60 * 60;
+			seconds += atoi(line.substr(15, 2).c_str()) * 60;
+			seconds += atoi(line.substr(18, 2).c_str());
+		}
+    }
+	
+	return seconds;
+}
+
 int main(int argc, char** args) {
 
    if (!parse_args(argc, args))
@@ -15,16 +56,12 @@ int main(int argc, char** args) {
 	   return 0;
    }
 
-   //call ffmpeg with original file and store output in ffmpeg_duration_command_output
-   std::string ffmpeg_duration_command = "ffmpeg -i ";
-   ffmpeg_duration_command += "\"";
-   ffmpeg_duration_command += input_filename;
-   ffmpeg_duration_command += "\"";
-   ffmpeg_duration_command += " 2>&1"; // redirect stderr to stdout, ffmpeg use stderr when there is no output file
-   std::string ffmpeg_duration_command_output = exec_get_return(ffmpeg_duration_command.c_str());
+   deleteTempWav();
+
+   createWavTempFile(input_filename);
    
-   //calculate duration, chunk size, number of chunks, etc..
-   int duration = getDurationInSeconds(ffmpeg_duration_command_output);
+   //calculate duration, chunk size, number of chunks, etc..   
+   int duration = getWavDuration(TEMP_WAV_FILE);
    int chunkSize = interval_minutes * 60;
    int chunks = duration / chunkSize;
    int lastChunk = duration % chunkSize;
@@ -53,7 +90,7 @@ int main(int argc, char** args) {
 
      //split
      std::stringstream ffmpegCommand;
-     ffmpegCommand << "ffmpeg -i " << "\"" << input_filename << "\"" << " -ss " << start_offset << " -t " << chunkSize << " " << "\"" << wavOutput << ".wav\"";
+     ffmpegCommand << "ffmpeg -i " << "\"" << TEMP_WAV_FILE << "\"" << " -ss " << start_offset << " -t " << chunkSize << " " << "\"" << wavOutput << ".wav\"";
 	 start_offset += chunkSize;
      system(ffmpegCommand.str().c_str());
 
@@ -97,8 +134,18 @@ int main(int argc, char** args) {
 	 CloseHandle(h_mp3_file);
    }
 
+   deleteTempWav();
+
    return 0;
 }
+
+void deleteTempWav()
+{
+	std::string del_comm = "del ";
+	del_comm += TEMP_WAV_FILE;
+	system(del_comm.c_str());
+}
+
 
 std::string exec_get_return(const char* cmd) { //from here: http://stackoverflow.com/questions/478898/how-to-execute-a-command-and-get-output-of-command-within-c-using-posix
 	char buffer[128];
@@ -116,26 +163,6 @@ std::string exec_get_return(const char* cmd) { //from here: http://stackoverflow
     }
     pclose(pipe);
     return result;
-}
-
-int getDurationInSeconds(std::string ffmpeg_out)
-{
-	int seconds = 0;
-	//process ffmpeg output to find duration of file
-	std::istringstream f(ffmpeg_out);
-	std::string line;
-	while (std::getline(f, line)) {
-		if (line.substr(2, 8) == "Duration")
-		{
-			//get hours, minutes and seconds from line
-			//ex:   Duration: 00:59:14.74, bitrate: 1411 kb/s		
-			seconds += atoi(line.substr(12, 2).c_str()) * 60 * 60;
-			seconds += atoi(line.substr(15, 2).c_str()) * 60;
-			seconds += atoi(line.substr(18, 2).c_str());
-		}
-    }
-	
-	return seconds;
 }
 
 //true if all required args are passed
