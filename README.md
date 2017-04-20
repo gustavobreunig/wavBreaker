@@ -17,8 +17,8 @@ Dependencies:
 
 Before:
 
-![Before](/before.png?raw=true)
+![Before](/before.PNG?raw=true)
 
 After:
 
-![After](/after.png?raw=true)
+![After](/after.PNG?raw=true)
