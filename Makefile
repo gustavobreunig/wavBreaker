@@ -13,5 +13,5 @@ all:
 	$(CC) $(CFLAGS) $(FILES) -o $(OUTPUT) $(LDFLAGS)
 
 clean:
-    del out\*.* /s /q
+	del out\*.* /s /q
 	rmdir out
