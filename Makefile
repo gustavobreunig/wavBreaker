@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-std=c++11 -Wall -O3
-LDFLAGS=-static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
+LDFLAGS=-static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -Wl,-Bdynamic -U__STRICT_ANSI__
 
 FILES= wavBreaker.cpp
 

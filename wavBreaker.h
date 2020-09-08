@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdexcept>
 #include <windows.h>
+#include <stdio.h>
 
 const char* TEMP_WAV_FILE = "wavTemp.wav";
 
